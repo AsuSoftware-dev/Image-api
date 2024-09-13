@@ -24,6 +24,10 @@ public class Image {
     @Column(name = "file_url", nullable = false)
     private String fileUrl;
 
-    @Column(name = "post_id", nullable = false)
-    private UUID postId;
+    @Column(name = "owner_id", nullable = false)
+    private UUID ownerId;  // Acesta poate fi userId sau postId
+
+    @Column(name = "type", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private ImageType type;  // Tipul imaginii: POST sau USER
 }
