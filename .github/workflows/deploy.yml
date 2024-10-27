@@ -1,0 +1,57 @@
+name: Deploy Image API to Raspberry Pi 5
+
+on:
+  push:
+    branches:
+      - main  # Rulează workflow-ul la fiecare push pe branch-ul principal
+
+jobs:
+  build_and_deploy:
+    runs-on: [self-hosted, Linux, ARM64] # Rulează pe runner-ul configurat pe Raspberry Pi 4, utilizând toate etichetele
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Install Maven
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y maven
+
+      - name: Build application with Maven
+        run: mvn clean package -DskipTests
+
+      - name: Build Docker image
+        run: |
+          docker build -t image-api:latest .
+
+      - name: Save and transfer image to Raspberry Pi 5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          # Salvează imaginea Docker într-un fișier .tar
+          docker save image-api:latest -o image-api.tar
+          
+          # Transferă fișierul .tar pe Raspberry Pi 5 în /home/antonio/
+          scp -i ~/.ssh/id_rsa -P 15621 image-api.tar antonio@antonio-dev.go.ro:/home/antonio/
+
+      - name: Load image and deploy on Raspberry Pi 5
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          ssh -i ~/.ssh/id_rsa -p 15621 antonio@antonio-dev.go.ro "
+             docker load -i /home/antonio/image-api.tar
+          "
+
+      - name: Clean up Docker images and tar files on Raspberry Pi 4
+        run: |
+          docker rmi image-api:latest
+          rm image-api.tar

@@ -1,5 +1,5 @@
 server:
-  port: ${IMAGE_SERVICE_PORT:8083}
+  port: ${IMAGE_SERVICE_PORT:8085}
 
 spring:
   application:
